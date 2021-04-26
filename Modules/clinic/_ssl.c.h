@@ -88,6 +88,49 @@ exit:
     return return_value;
 }
 
+PyDoc_STRVAR(_ssl__SSLSocket_getpeercertchain__doc__,
+"getpeercertchain($self, der=False, /)\n"
+"--\n"
+"\n"
+"Returns the certificate chain for the peer.\n"
+"\n"
+"If no certificate was provided, returns None.  If a certificate was\n"
+"provided, but not validated, returns an empty list.  Otherwise\n"
+"returns a list of dict containing information about the peer certificates.\n"
+"\n"
+"If the optional argument is True, returns a DER-encoded copy of the\n"
+"peer certificates, or None if no certificate was provided.  This will\n"
+"return the certificates even if it wasn\'t validated.");
+
+#define _SSL__SSLSOCKET_GETPEERCERTCHAIN_METHODDEF    \
+    {"getpeercertchain", (PyCFunction)(void(*)(void))_ssl__SSLSocket_getpeercertchain, METH_FASTCALL, _ssl__SSLSocket_getpeercertchain__doc__},
+
+static PyObject *
+_ssl__SSLSocket_getpeercertchain_impl(PySSLSocket *self, int binary_mode);
+
+static PyObject *
+_ssl__SSLSocket_getpeercertchain(PySSLSocket *self, PyObject *const *args, Py_ssize_t nargs)
+{
+    PyObject *return_value = NULL;
+    int binary_mode = 0;
+
+    if (!_PyArg_CheckPositional("getpeercertchain", nargs, 0, 1)) {
+        goto exit;
+    }
+    if (nargs < 1) {
+        goto skip_optional;
+    }
+    binary_mode = PyObject_IsTrue(args[0]);
+    if (binary_mode < 0) {
+        goto exit;
+    }
+skip_optional:
+    return_value = _ssl__SSLSocket_getpeercertchain_impl(self, binary_mode);
+
+exit:
+    return return_value;
+}
+
 PyDoc_STRVAR(_ssl__SSLSocket_shared_ciphers__doc__,
 "shared_ciphers($self, /)\n"
 "--\n"

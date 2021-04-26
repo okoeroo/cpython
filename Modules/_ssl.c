@@ -1798,6 +1798,81 @@ _ssl__SSLSocket_getpeercert_impl(PySSLSocket *self, int binary_mode)
     return result;
 }
 
+
+/*[clinic input]
+_ssl._SSLSocket.getpeercertchain
+    der as binary_mode: bool = False
+    /
+
+Returns the certificate chain for the peer.
+
+If no certificate was provided, returns None.  If a certificate was
+provided, but not validated, returns an empty list.  Otherwise
+returns an list of dict containing information about the peer certificates.
+
+If the optional argument is True, returns a DER-encoded copy of the
+peer certificates, or None if no certificate was provided.  This will
+return the certificates even if it wasn't validated.
+[clinic start generated code]*/
+
+static PyObject *
+_ssl__SSLSocket_getpeercertchain_impl(PySSLSocket *self, int binary_mode)
+{
+    int verification;
+    int i;
+    X509 *cert;
+    STACK_OF(X509) *peer_chain;
+    PyObject *cert_obj, *result;
+    PyObject *cert_list;
+
+    if (!SSL_is_init_finished(self->ssl)) {
+        PyErr_SetString(PyExc_ValueError,
+                        "handshake not done yet");
+        return NULL;
+    }
+    peer_chain = SSL_get_peer_cert_chain(self->ssl);
+    if (peer_chain == NULL)
+        Py_RETURN_NONE;
+
+    if (binary_mode) {
+        /* return certs in list of elements with each in DER-encoded format */
+        cert_list = PyList_New(0);
+        for (i = 0; i < sk_X509_num(peer_chain); i++) {
+            cert = sk_X509_value(peer_chain, i);
+            cert_obj = _certificate_to_der(get_state_sock(self), cert);
+
+            /* Append decoded certificate to output list */
+            if (PyList_Append(cert_list, cert_obj) < 0) {
+                goto error;
+            }
+        }
+        result = cert_list;
+
+    } else {
+        verification = SSL_CTX_get_verify_mode(SSL_get_SSL_CTX(self->ssl));
+        if ((verification & SSL_VERIFY_PEER) == 0)
+            result = PyList_New(0);
+        else {
+            cert_list = PyList_New(0);
+            for (i = 0; i < sk_X509_num(peer_chain); i++) {
+                cert = sk_X509_value(peer_chain, i);
+                cert_obj = _decode_certificate(get_state_sock(self), cert);
+
+                /* Append decoded certificate to output list */
+                if (PyList_Append(cert_list, cert_obj) < 0)
+                    goto error;
+            }
+            result = cert_list;
+        }
+    }
+    sk_X509_pop_free(peer_chain, X509_free);
+    return result;
+error:
+    Py_DECREF(cert_list);
+    sk_X509_pop_free(peer_chain, X509_free);
+    Py_RETURN_NONE;
+}
+
 static PyObject *
 cipher_to_tuple(const SSL_CIPHER *cipher)
 {
